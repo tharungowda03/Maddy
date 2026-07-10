@@ -1,9 +1,12 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional
 
+from pydantic import BaseModel, EmailStr
 
-# ---------- User ----------
+
+# ==========================
+# User Schemas
+# ==========================
 
 class UserCreate(BaseModel):
     name: str
@@ -20,19 +23,23 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-# ---------- Conversation ----------
+# ==========================
+# Conversation Schemas
+# ==========================
 
 class ConversationCreate(BaseModel):
+    user_id: int
     provider: str
     model: str
 
 
-class ConversationUpdate(BaseModel):
+class ConversationRename(BaseModel):
     title: str
 
 
 class ConversationResponse(BaseModel):
     id: int
+    user_id: int
     title: str
     provider: str
     model: str
@@ -42,7 +49,9 @@ class ConversationResponse(BaseModel):
         from_attributes = True
 
 
-# ---------- Message ----------
+# ==========================
+# Message Schemas
+# ==========================
 
 class MessageCreate(BaseModel):
     conversation_id: int
@@ -50,11 +59,15 @@ class MessageCreate(BaseModel):
     image_path: Optional[str] = None
 
 
+# ==========================
+# Chat Schemas
+# ==========================
+
 class ChatRequest(BaseModel):
     conversation_id: int
     provider: str
     model: str
-    message: str
+    prompt: str
 
 
 class ChatResponse(BaseModel):
