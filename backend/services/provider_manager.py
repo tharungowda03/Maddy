@@ -3,10 +3,13 @@ from providers.openai_provider import OpenAIProvider
 from providers.groq_provider import GroqProvider
 from providers.openrouter_provider import OpenRouterProvider
 
+from utils.model_registry import get_provider_by_model
+
 
 class ProviderManager:
 
     def __init__(self):
+
         self.providers = {
             "gemini": GeminiProvider(),
             "openai": OpenAIProvider(),
@@ -14,11 +17,13 @@ class ProviderManager:
             "openrouter": OpenRouterProvider(),
         }
 
-    def get_provider(self, provider: str):
+    def get_provider(self, model: str):
 
-        provider = self.providers.get(provider.lower())
+        provider_name = get_provider_by_model(model)
 
-        if provider is None:
-            raise ValueError("Unsupported Provider")
+        if provider_name is None:
+            raise ValueError(
+                f"No provider found for model '{model}'"
+            )
 
-        return provider
+        return self.providers[provider_name]

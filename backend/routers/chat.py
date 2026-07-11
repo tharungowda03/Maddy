@@ -64,8 +64,8 @@ def chat(
 
     # Get provider
     provider = provider_manager.get_provider(
-        conversation.provider
-    )
+    conversation.model
+)
 
     # Generate AI response
     try:
