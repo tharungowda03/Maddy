@@ -15,14 +15,18 @@ class GeminiProvider(BaseProvider):
         model: str
     ):
 
-        contents = []
+        try:
+            prompt = "\n".join(
+                message["content"]
+                for message in messages
+            )
 
-        for message in messages:
-            contents.append(message["content"])
+            response = self.client.models.generate_content(
+                model=model,
+                contents=prompt
+            )
 
-        response = self.client.models.generate_content(
-            model=model,
-            contents="\n".join(contents)
-        )
+            return response.text
 
-        return response.text
+        except Exception as e:
+            raise Exception(f"Gemini Error: {str(e)}")

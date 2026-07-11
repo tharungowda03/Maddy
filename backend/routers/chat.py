@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
 from schemas import ChatRequest
 from services.provider_manager import ProviderManager
+from services.title_generator import generate_title
 from services.conversation_service import (
+    get_conversation,
     get_messages,
-    save_message
+    save_message,
+    update_conversation_title
 )
 
 router = APIRouter(
@@ -23,7 +26,29 @@ def chat(
     db: Session = Depends(get_db)
 ):
 
-    # Save user's prompt
+    # Load conversation
+    conversation = get_conversation(
+        db,
+        request.conversation_id
+    )
+
+    if conversation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found"
+        )
+
+    # Generate title only for first message
+    if conversation.title == "New Chat":
+        title = generate_title(request.prompt)
+
+        update_conversation_title(
+            db,
+            conversation.id,
+            title
+        )
+
+    # Save user message
     save_message(
         db=db,
         conversation_id=request.conversation_id,
@@ -31,7 +56,7 @@ def chat(
         content=request.prompt
     )
 
-    # Load full conversation
+    # Load conversation history
     messages = get_messages(
         db=db,
         conversation_id=request.conversation_id
@@ -39,14 +64,21 @@ def chat(
 
     # Get provider
     provider = provider_manager.get_provider(
-        request.provider
+        conversation.provider
     )
 
     # Generate AI response
-    response = provider.generate_response(
-        messages,
-        request.model
-    )
+    try:
+        response = provider.generate_response(
+            messages,
+            conversation.model
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=str(e)
+        )
 
     # Save AI response
     save_message(
@@ -57,5 +89,8 @@ def chat(
     )
 
     return {
-        "response": response
+        "success": True,
+        "response": response,
+        "provider": conversation.provider,
+        "model": conversation.model
     }

@@ -65,8 +65,6 @@ class MessageCreate(BaseModel):
 
 class ChatRequest(BaseModel):
     conversation_id: int
-    provider: str
-    model: str
     prompt: str
 
 

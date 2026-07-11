@@ -7,7 +7,6 @@ from providers.openrouter_provider import OpenRouterProvider
 class ProviderManager:
 
     def __init__(self):
-
         self.providers = {
             "gemini": GeminiProvider(),
             "openai": OpenAIProvider(),

@@ -115,3 +115,32 @@ def get_messages(
         }
         for message in messages
     ]
+def get_conversation(
+    db: Session,
+    conversation_id: int
+):
+    return (
+        db.query(Conversation)
+        .filter(
+            Conversation.id == conversation_id
+        )
+        .first()
+    )
+def update_conversation_title(
+    db: Session,
+    conversation_id: int,
+    title: str
+):
+
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id)
+        .first()
+    )
+
+    if conversation:
+        conversation.title = title
+        db.commit()
+        db.refresh(conversation)
+
+    return conversation
