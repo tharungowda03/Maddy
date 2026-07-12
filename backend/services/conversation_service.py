@@ -4,9 +4,6 @@ from models import Conversation, Message
 from schemas import ConversationCreate
 
 
-# -----------------------------
-# Conversation Functions
-# -----------------------------
 
 def create_conversation(
     db: Session,
@@ -74,9 +71,6 @@ def delete_conversation(
     return conversation
 
 
-# -----------------------------
-# Message Functions
-# -----------------------------
 
 def save_message(
     db: Session,

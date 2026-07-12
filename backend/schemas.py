@@ -4,9 +4,6 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 
-# ==========================
-# User Schemas
-# ==========================
 
 class UserCreate(BaseModel):
     name: str
@@ -23,9 +20,6 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-# ==========================
-# Conversation Schemas
-# ==========================
 
 class ConversationCreate(BaseModel):
     user_id: int
@@ -49,9 +43,6 @@ class ConversationResponse(BaseModel):
         from_attributes = True
 
 
-# ==========================
-# Message Schemas
-# ==========================
 
 class MessageCreate(BaseModel):
     conversation_id: int
@@ -59,9 +50,6 @@ class MessageCreate(BaseModel):
     image_path: Optional[str] = None
 
 
-# ==========================
-# Chat Schemas
-# ==========================
 
 class ChatRequest(BaseModel):
     conversation_id: int

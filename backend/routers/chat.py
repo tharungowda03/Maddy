@@ -26,7 +26,6 @@ def chat(
     db: Session = Depends(get_db)
 ):
 
-    # Load conversation
     conversation = get_conversation(
         db,
         request.conversation_id
@@ -38,7 +37,6 @@ def chat(
             detail="Conversation not found"
         )
 
-    # Generate title only for first message
     if conversation.title == "New Chat":
         title = generate_title(request.prompt)
 
@@ -48,7 +46,6 @@ def chat(
             title
         )
 
-    # Save user message
     save_message(
         db=db,
         conversation_id=request.conversation_id,
@@ -56,18 +53,15 @@ def chat(
         content=request.prompt
     )
 
-    # Load conversation history
     messages = get_messages(
         db=db,
         conversation_id=request.conversation_id
     )
 
-    # Get provider
     provider = provider_manager.get_provider(
     conversation.model
 )
 
-    # Generate AI response
     try:
         response = provider.generate_response(
             messages,
@@ -80,7 +74,6 @@ def chat(
             detail=str(e)
         )
 
-    # Save AI response
     save_message(
         db=db,
         conversation_id=request.conversation_id,

@@ -1,0 +1,36 @@
+.settings-section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.settings-section:last-child { border-bottom: none; }
+.settings-section h3 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.theme-option {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: var(--text-sm);
+  color: var(--text);
+  transition: all var(--dur) var(--ease);
+}
+.theme-option:hover { background: var(--surface-hover); }
+.theme-option.selected {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--surface);
+}

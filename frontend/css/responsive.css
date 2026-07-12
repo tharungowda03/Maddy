@@ -1,0 +1,28 @@
+@media (max-width: 900px) {
+  :root { --chat-max-w: 720px; }
+}
+
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-menu-btn { display: inline-flex; }
+  .chat-inner { padding: 20px 16px; }
+  .composer-wrap { padding: 8px 12px 12px; }
+  .login-card { padding: 24px 20px; }
+}
+
+@media (max-width: 480px) {
+  .message.user .msg-bubble { max-width: 92%; }
+  .topbar-title { font-size: var(--text-xs); }
+}
