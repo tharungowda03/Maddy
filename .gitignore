@@ -1,37 +1,38 @@
+# Python bytecode and tooling caches
 __pycache__/
 *.py[cod]
 *$py.class
-
-venv/
-env/
-.venv/
-
-.env
-
-*.db
-*.sqlite3
-
-*.log
-
-.vscode/*
-!.vscode/settings.json
-.idea/
-
-.DS_Store
-Thumbs.db
-
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
 
+# Virtual environments and build artifacts
+env/
+venv/
+.venv/
 build/
 dist/
 *.egg-info/
 
+# Secrets and local data
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite3
 uploads/*
 !uploads/.gitkeep
 
+# Logs and temporary files
+*.log
 *.tmp
 *.temp
+
+# Editor and operating-system files
+.vscode/*
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

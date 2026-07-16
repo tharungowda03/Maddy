@@ -11,6 +11,7 @@ export const ChatStore = {
     } catch { return []; }
   },
   save(chats) { localStorage.setItem(KEY, JSON.stringify(chats)); },
+  replace(chats) { this.save(Array.isArray(chats) ? chats : []); },
   get(id) { return this.list().find((c) => c.id === id); },
   getActiveId() { return localStorage.getItem(ACTIVE_KEY); },
   setActive(id) { id ? localStorage.setItem(ACTIVE_KEY, id) : localStorage.removeItem(ACTIVE_KEY); },

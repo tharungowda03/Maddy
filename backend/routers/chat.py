@@ -58,11 +58,10 @@ def chat(
         conversation_id=request.conversation_id
     )
 
-    provider = provider_manager.get_provider(
-    conversation.model
-)
-
     try:
+        provider = provider_manager.get_provider(
+            conversation.model
+        )
         response = provider.generate_response(
             messages,
             conversation.model

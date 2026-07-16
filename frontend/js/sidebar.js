@@ -67,9 +67,12 @@ export function initSidebar({ onOpenChat, onNewChat, onRenameChat, onDeleteChat 
       const act = actBtn.dataset.act;
       if (act === "delete") {
         if (confirm("Delete this chat?")) {
+          const wasActive = ChatStore.getActiveId() === id;
           await onDeleteChat?.(id);
           ChatStore.remove(id);
-          if (ChatStore.getActiveId() === id) await onNewChat?.();
+          // ChatStore.remove clears the active ID, so remember its state
+          // beforehand and create/select a fresh chat after an active delete.
+          if (wasActive) await onNewChat?.();
           render();
         }
       } else if (act === "rename") {

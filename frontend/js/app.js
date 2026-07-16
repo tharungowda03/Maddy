@@ -23,6 +23,24 @@ function syncUser(user) {
   return currentUser;
 }
 
+async function loadUserConversations(user) {
+  const conversations = await API.getUserConversations(user.id);
+  const chats = conversations.map((conversation) => ({
+    id: `server-${conversation.id}`,
+    backendConversationId: conversation.id,
+    userId: conversation.user_id,
+    title: conversation.title || "New Chat",
+    provider: conversation.provider,
+    model: conversation.model,
+    messages: conversation.messages || [],
+    createdAt: new Date(conversation.created_at).getTime() || Date.now(),
+  }));
+  ChatStore.replace(chats);
+  ChatStore.setActive(chats[0]?.id || null);
+  sidebarUI.render();
+  return chats;
+}
+
 async function ensureBackendConversation(chat) {
   if (!chat || chat.backendConversationId || !currentUser?.id) {
     return chat;
@@ -188,6 +206,7 @@ initAccountMenu({
     currentAbort = null;
     currentUser = null;
     User.clear();
+    ChatStore.clearAll();
     updateAccountUI(null);
     showLoginScreen();
   },
@@ -196,6 +215,12 @@ initAccountMenu({
 initLogin({
   onLogin: async (user) => {
     syncUser(user);
+    try {
+      await loadUserConversations(user);
+    } catch (err) {
+      ChatStore.clearAll();
+      console.error("Unable to load conversation history", err);
+    }
     document.querySelector(".login-card")?.classList.add("login-hide");
     setTimeout(() => {
       const active = ChatStore.getActiveId();
@@ -206,29 +231,13 @@ initLogin({
 });
 
 async function bootstrap() {
-  let user = User.get();
-  if (user) {
-    try {
-      if (!user.id) {
-        user = await API.continueUser(user);
-        User.set(user);
-      }
-    } catch {
-    }
-  }
-
-  syncUser(user);
+  // A direct visit always starts at login. This also prevents a previous
+  // browser user's locally cached chats from appearing for the next user.
+  User.clear();
+  ChatStore.clearAll();
+  syncUser(null);
   sidebarUI.render();
-
-  if (user) {
-    const active = ChatStore.getActiveId();
-    if (active && ChatStore.get(active)) openChat(active);
-    else {
-      showChatScreen();
-    }
-  } else {
-    showLoginScreen();
-  }
+  showLoginScreen();
 }
 
 bootstrap();

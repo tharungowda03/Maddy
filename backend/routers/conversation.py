@@ -21,7 +21,10 @@ def new_conversation(
     conversation: ConversationCreate,
     db: Session = Depends(get_db)
 ):
-    return create_conversation(db, conversation)
+    created = create_conversation(db, conversation)
+    if not created:
+        raise HTTPException(status_code=404, detail="User not found")
+    return created
 
 
 @router.get("/user/{user_id}")

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
+from datetime import datetime
 
-from models import Conversation, Message
+from models import Conversation, Message, User
 from schemas import ConversationCreate
 
 
@@ -9,6 +10,10 @@ def create_conversation(
     db: Session,
     conversation: ConversationCreate
 ):
+    # Do not create orphaned conversations for a user ID that does not exist.
+    if not db.query(User.id).filter(User.id == conversation.user_id).first():
+        return None
+
     new_conversation = Conversation(
         user_id=conversation.user_id,
         provider=conversation.provider,
@@ -27,12 +32,28 @@ def get_conversations(
     db: Session,
     user_id: int
 ):
-    return (
+    conversations = (
         db.query(Conversation)
         .filter(Conversation.user_id == user_id)
         .order_by(Conversation.updated_at.desc())
         .all()
     )
+
+    # Return the messages with each conversation so a returning user can open
+    # their previous chats without relying on another browser's local storage.
+    return [
+        {
+            "id": conversation.id,
+            "user_id": conversation.user_id,
+            "title": conversation.title,
+            "provider": conversation.provider,
+            "model": conversation.model,
+            "created_at": conversation.created_at,
+            "updated_at": conversation.updated_at,
+            "messages": get_messages(db, conversation.id),
+        }
+        for conversation in conversations
+    ]
 
 
 def rename_conversation(
@@ -85,6 +106,9 @@ def save_message(
     )
 
     db.add(message)
+    conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if conversation:
+        conversation.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(message)
 

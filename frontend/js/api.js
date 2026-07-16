@@ -3,8 +3,11 @@ const DEFAULT_BASE_URL = "http://127.0.0.1:8000";
 function getBaseUrl() {
   if (window.__API_BASE__) return window.__API_BASE__.replace(/\/$/, "");
 
+  // The FastAPI app serves the frontend and API together in production.
+  // Using the current origin avoids requests being sent to a visitor's own
+  // localhost after deployment.
   if (window.location.protocol === "http:" || window.location.protocol === "https:") {
-    if (window.location.port === "8000") return window.location.origin;
+    return window.location.origin;
   }
   return DEFAULT_BASE_URL;
 }
@@ -37,6 +40,14 @@ export const API = {
       throw new Error(`HTTP ${res.status}`);
     }
 
+    return res.json();
+  },
+
+  async getUserConversations(userId) {
+    const res = await fetch(`${this.BASE_URL}/conversation/user/${userId}`);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
     return res.json();
   },
 
