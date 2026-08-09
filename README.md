@@ -1,6 +1,8 @@
 # Maddy Chat
+<img width="580" height="164" alt="image" src="https://github.com/user-attachments/assets/44684a4b-c0c8-4847-b9d9-f16502d2b235" />
 
-[![Python].(https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+
+(https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![JavaScript](https://img.shields.io/badge/Frontend-Vanilla%20JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/docs/Web/JavaScript)
 [![Database](https://img.shields.io/badge/Database-SQLAlchemy-D71F00?logo=sqlite&logoColor=white)](https://www.sqlalchemy.org/)
