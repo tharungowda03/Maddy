@@ -30,6 +30,7 @@ OpenRouter models.
 
 ## Technology
 
+
 - **Backend:** Python, FastAPI, SQLAlchemy
 - **Frontend:** HTML, CSS, and vanilla JavaScript
 - **Database:** SQLite for local development; PostgreSQL is recommended for production
