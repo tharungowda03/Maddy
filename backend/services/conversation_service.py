@@ -5,12 +5,10 @@ from models import Conversation, Message, User
 from schemas import ConversationCreate
 
 
-
 def create_conversation(
     db: Session,
     conversation: ConversationCreate
 ):
-    # Do not create orphaned conversations for a user ID that does not exist.
     if not db.query(User.id).filter(User.id == conversation.user_id).first():
         return None
 
@@ -39,8 +37,6 @@ def get_conversations(
         .all()
     )
 
-    # Return the messages with each conversation so a returning user can open
-    # their previous chats without relying on another browser's local storage.
     return [
         {
             "id": conversation.id,
@@ -92,7 +88,6 @@ def delete_conversation(
     return conversation
 
 
-
 def save_message(
     db: Session,
     conversation_id: int,
@@ -133,6 +128,8 @@ def get_messages(
         }
         for message in messages
     ]
+
+
 def get_conversation(
     db: Session,
     conversation_id: int
@@ -144,12 +141,13 @@ def get_conversation(
         )
         .first()
     )
+
+
 def update_conversation_title(
     db: Session,
     conversation_id: int,
     title: str
 ):
-
     conversation = (
         db.query(Conversation)
         .filter(Conversation.id == conversation_id)
@@ -158,6 +156,57 @@ def update_conversation_title(
 
     if conversation:
         conversation.title = title
+        conversation.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(conversation)
+
+    return conversation
+
+
+def update_conversation_model(
+    db: Session,
+    conversation_id: int,
+    model: str,
+    provider: str = None
+):
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id)
+        .first()
+    )
+
+    if conversation:
+        conversation.model = model
+        if provider:
+            conversation.provider = provider
+        conversation.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(conversation)
+
+    return conversation
+
+
+def update_conversation(
+    db: Session,
+    conversation_id: int,
+    title: str = None,
+    model: str = None,
+    provider: str = None
+):
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id)
+        .first()
+    )
+
+    if conversation:
+        if title is not None:
+            conversation.title = title
+        if model is not None:
+            conversation.model = model
+        if provider is not None:
+            conversation.provider = provider
+        conversation.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(conversation)
 

@@ -1,8 +1,11 @@
 export const MODELS = [
-  { id: "gemini-2.5-flash", label: "Gemini", provider: "gemini" },
-  { id: "llama-3.3-70b-versatile", label: "Groq", provider: "groq" },
-  { id: "gpt-4o", label: "OpenAI", provider: "openai" },
-  { id: "deepseek/deepseek-chat", label: "OpenRouter", provider: "openrouter" },
+  { id: "gemini-2.5-flash", label: "Gemini (Flash)", provider: "gemini" },
+  { id: "qwen/qwen3.8-27b", label: "Groq (Qwen 3.8)", provider: "groq" },
+  { id: "openai/gpt-oss-120b", label: "Groq (GPT-OSS)", provider: "groq" },
+  { id: "deepseek/deepseek-chat", label: "OpenRouter (DeepSeek)", provider: "openrouter" },
+  { id: "meta-llama/llama-3.3-70b-instruct", label: "OpenRouter (Llama 3.3)", provider: "openrouter" },
+  { id: "gpt-4o", label: "OpenAI (GPT-4o)", provider: "openai" },
+  { id: "llama-3.3-70b-versatile", label: "Groq (Legacy Llama)", provider: "groq" },
 ];
 
 export function getModelConfig(id) {
@@ -27,18 +30,23 @@ export const ModelStore = {
   },
 };
 
-export function initModelSelector({ onChange } = {}) {
-  const btn = document.getElementById("modelBtn");
-  const menu = document.getElementById("modelMenu");
+export function updateModelSelectorUI(modelId) {
+  const current = modelId || ModelStore.get();
   const label = document.getElementById("modelLabel");
-
-  const render = () => {
-    const current = ModelStore.get();
+  const menu = document.getElementById("modelMenu");
+  if (label) {
     label.textContent = ModelStore.label(current);
+  }
+  if (menu) {
     menu.querySelectorAll("li").forEach((li) => {
       li.classList.toggle("selected", li.dataset.model === current);
     });
-  };
+  }
+}
+
+export function initModelSelector({ onChange } = {}) {
+  const btn = document.getElementById("modelBtn");
+  const menu = document.getElementById("modelMenu");
 
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -49,11 +57,12 @@ export function initModelSelector({ onChange } = {}) {
   menu.addEventListener("click", (e) => {
     const li = e.target.closest("li[data-model]");
     if (!li) return;
-    ModelStore.set(li.dataset.model);
-    render();
+    const selectedModel = li.dataset.model;
+    ModelStore.set(selectedModel);
+    updateModelSelectorUI(selectedModel);
     menu.classList.remove("open");
     btn.setAttribute("aria-expanded", "false");
-    onChange && onChange(li.dataset.model);
+    onChange && onChange(selectedModel);
   });
 
   document.addEventListener("click", () => {
@@ -61,5 +70,5 @@ export function initModelSelector({ onChange } = {}) {
     btn.setAttribute("aria-expanded", "false");
   });
 
-  render();
+  updateModelSelectorUI(ModelStore.get());
 }

@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from schemas import ConversationCreate, ConversationRename
+from schemas import ConversationCreate, ConversationRename, ConversationUpdate
 from services.conversation_service import (
     create_conversation,
     get_conversations,
     rename_conversation,
+    update_conversation as service_update_conversation,
     delete_conversation
 )
 
@@ -36,15 +37,18 @@ def get_user_conversations(
 
 
 @router.put("/{conversation_id}")
-def update_conversation(
+@router.patch("/{conversation_id}")
+def update_conversation_endpoint(
     conversation_id: int,
-    data: ConversationRename,
+    data: ConversationUpdate,
     db: Session = Depends(get_db)
 ):
-    conversation = rename_conversation(
-        db,
-        conversation_id,
-        data.title
+    conversation = service_update_conversation(
+        db=db,
+        conversation_id=conversation_id,
+        title=data.title,
+        model=data.model,
+        provider=data.provider
     )
 
     if not conversation:

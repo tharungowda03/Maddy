@@ -2,7 +2,7 @@ import { Theme } from "./theme.js";
 import { User, initLogin, updateAccountUI } from "./login.js";
 import { initSidebar } from "./sidebar.js";
 import { ChatStore, initChat } from "./chat.js";
-import { initModelSelector, ModelStore, getProviderForModel } from "./models.js";
+import { initModelSelector, ModelStore, getProviderForModel, updateModelSelectorUI } from "./models.js";
 import { initSettings, initAccountMenu } from "./settings.js";
 import { API } from "./api.js";
 
@@ -35,8 +35,10 @@ async function loadUserConversations(user) {
     messages: conversation.messages || [],
     createdAt: new Date(conversation.created_at).getTime() || Date.now(),
   }));
+  const activeId = ChatStore.getActiveId();
   ChatStore.replace(chats);
-  ChatStore.setActive(chats[0]?.id || null);
+  const keepActive = chats.find((c) => c.id === activeId);
+  ChatStore.setActive(keepActive ? activeId : (chats[0]?.id || null));
   sidebarUI.render();
   return chats;
 }
@@ -70,6 +72,7 @@ function showChatScreen() {
   chatScreen.classList.add("slide-up");
   chatUI.focusInput();
 }
+
 function showLoginScreen() {
   document.body.classList.add("logged-out");
   settingsCtl?.close();
@@ -85,19 +88,26 @@ function openChat(id) {
   const chat = ChatStore.get(id);
   topbarTitle.textContent = chat?.title || "New chat";
   chatUI.renderMessages(chat);
+
+  const model = chat?.model || ModelStore.get();
+  ModelStore.set(model);
+  updateModelSelectorUI(model);
+
   showChatScreen();
   sidebarUI.render();
 }
 
 function newChat() {
   const model = ModelStore.get();
+  const provider = getProviderForModel(model);
   const chat = ChatStore.create({
     model,
-    provider: getProviderForModel(model),
+    provider,
     userId: currentUser?.id || null,
   });
   ChatStore.setActive(chat.id);
   topbarTitle.textContent = "New chat";
+  updateModelSelectorUI(model);
   chatUI.renderMessages({ messages: [] });
   showChatScreen();
   sidebarUI.render();
@@ -106,9 +116,10 @@ function newChat() {
 async function handleSend(text) {
   let activeId = ChatStore.getActiveId();
   if (!activeId) {
+    const defaultModel = ModelStore.get();
     const c = ChatStore.create({
-      model: ModelStore.get(),
-      provider: getProviderForModel(ModelStore.get()),
+      model: defaultModel,
+      provider: getProviderForModel(defaultModel),
       userId: currentUser?.id || null,
     });
     activeId = c.id;
@@ -126,28 +137,45 @@ async function handleSend(text) {
   ChatStore.addMessage(activeId, { role: "assistant", content: "" });
 
   currentAbort = new AbortController();
+  let finalProvider = null;
+  let finalModel = null;
   try {
+    const currentModel = chat.model || ModelStore.get();
+    const currentProvider = chat.provider || getProviderForModel(currentModel);
+    finalProvider = currentProvider;
+    finalModel = currentModel;
     chat = await ensureBackendConversation(chat);
     const response = await API.chat({
       conversationId: chat.backendConversationId,
       prompt: text,
+      model: currentModel,
+      provider: currentProvider,
       signal: currentAbort.signal,
       onDelta: (piece) => {
         full += piece;
         stream.setContent(full);
       },
     });
-    if (!full && response) {
-      full = String(response);
-      stream.setContent(full);
+    if (response) {
+      if (typeof response === "object") {
+        if (response.provider) finalProvider = response.provider;
+        if (response.model) finalModel = response.model;
+        if (!full && response.text) {
+          full = String(response.text);
+          stream.setContent(full);
+        }
+      } else if (!full) {
+        full = String(response);
+        stream.setContent(full);
+      }
     }
   } catch (err) {
     if (err.name !== "AbortError") {
       full = full || `**Error:** ${err.message || "Unable to get a response."}`;
     }
   } finally {
-    stream.finalize(full);
-    ChatStore.updateLastMessage(activeId, full);
+    stream.finalize(full, finalProvider, finalModel);
+    ChatStore.updateLastMessage(activeId, full, { provider: finalProvider, model: finalModel });
     currentAbort = null;
   }
 }
@@ -192,7 +220,26 @@ sidebarUI = initSidebar({
     }
   },
 });
-initModelSelector();
+initModelSelector({
+  onChange: async (modelId) => {
+    const provider = getProviderForModel(modelId);
+    const activeId = ChatStore.getActiveId();
+    if (activeId) {
+      ChatStore.update(activeId, { model: modelId, provider });
+      const chat = ChatStore.get(activeId);
+      if (chat?.backendConversationId) {
+        try {
+          await API.updateConversation(chat.backendConversationId, {
+            model: modelId,
+            provider,
+          });
+        } catch (err) {
+          console.warn("Could not sync conversation model change with backend:", err);
+        }
+      }
+    }
+  },
+});
 const settingsCtl = initSettings({
   onCleared: () => {
     newChat();
@@ -201,10 +248,15 @@ const settingsCtl = initSettings({
 });
 initAccountMenu({
   onOpenSettings: () => settingsCtl.open(),
-  onLogout: () => {
+  onLogout: async () => {
     currentAbort?.abort();
     currentAbort = null;
     currentUser = null;
+    try {
+      await API.logout();
+    } catch (e) {
+      console.warn("Logout API error:", e);
+    }
     User.clear();
     ChatStore.clearAll();
     updateAccountUI(null);
@@ -231,10 +283,30 @@ initLogin({
 });
 
 async function bootstrap() {
-  // A direct visit always starts at login. This also prevents a previous
-  // browser user's locally cached chats from appearing for the next user.
+  try {
+    const user = await API.getCurrentUser();
+    if (user?.id) {
+      User.set(user);
+      syncUser(user);
+      try {
+        await loadUserConversations(user);
+      } catch (err) {
+        console.error("Unable to load conversation history on refresh:", err);
+      }
+      const active = ChatStore.getActiveId();
+      if (active && ChatStore.get(active)) {
+        openChat(active);
+      } else {
+        newChat();
+      }
+      showChatScreen();
+      return;
+    }
+  } catch (err) {
+    console.warn("Session check error:", err);
+  }
+
   User.clear();
-  ChatStore.clearAll();
   syncUser(null);
   sidebarUI.render();
   showLoginScreen();

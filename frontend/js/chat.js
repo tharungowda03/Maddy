@@ -1,20 +1,38 @@
 import { API } from "./api.js";
 import { ModelStore } from "./models.js";
 
-const KEY = "chat.chats";
+let _chats = [];
 const ACTIVE_KEY = "chat.active";
+
+try {
+  localStorage.removeItem("chat.chats");
+} catch {}
 
 export const ChatStore = {
   list() {
-    try {
-      return JSON.parse(localStorage.getItem(KEY) || "[]");
-    } catch { return []; }
+    return _chats;
   },
-  save(chats) { localStorage.setItem(KEY, JSON.stringify(chats)); },
-  replace(chats) { this.save(Array.isArray(chats) ? chats : []); },
-  get(id) { return this.list().find((c) => c.id === id); },
-  getActiveId() { return localStorage.getItem(ACTIVE_KEY); },
-  setActive(id) { id ? localStorage.setItem(ACTIVE_KEY, id) : localStorage.removeItem(ACTIVE_KEY); },
+  save(chats) {
+    _chats = Array.isArray(chats) ? chats : [];
+  },
+  replace(chats) {
+    this.save(chats);
+  },
+  get(id) {
+    return this.list().find((c) => c.id === id);
+  },
+  getActiveId() {
+    try {
+      return localStorage.getItem(ACTIVE_KEY);
+    } catch {
+      return null;
+    }
+  },
+  setActive(id) {
+    try {
+      id ? localStorage.setItem(ACTIVE_KEY, id) : localStorage.removeItem(ACTIVE_KEY);
+    } catch {}
+  },
   create(initial = {}) {
     const chat = {
       id: crypto.randomUUID(),
@@ -26,41 +44,41 @@ export const ChatStore = {
       provider: initial.provider || null,
       userId: initial.userId || null,
     };
-    const chats = [chat, ...this.list()];
-    this.save(chats);
+    _chats = [chat, ...this.list()];
     this.setActive(chat.id);
     return chat;
   },
   update(id, patch) {
-    const chats = this.list().map((c) => (c.id === id ? { ...c, ...patch } : c));
-    this.save(chats);
+    _chats = this.list().map((c) => (c.id === id ? { ...c, ...patch } : c));
   },
   addMessage(id, msg) {
-    const chats = this.list();
-    const chat = chats.find((c) => c.id === id);
+    const chat = this.list().find((c) => c.id === id);
     if (!chat) return;
     chat.messages.push(msg);
     if (chat.messages.length === 1 && msg.role === "user") {
       chat.title = msg.content.slice(0, 48) || "New chat";
     }
-    this.save(chats);
   },
-  updateLastMessage(id, content) {
-    const chats = this.list();
-    const chat = chats.find((c) => c.id === id);
+  updateLastMessage(id, content, patch = {}) {
+    const chat = this.list().find((c) => c.id === id);
     if (!chat || !chat.messages.length) return;
-    chat.messages[chat.messages.length - 1].content = content;
-    this.save(chats);
+    const last = chat.messages[chat.messages.length - 1];
+    last.content = content;
+    Object.assign(last, patch);
   },
-  rename(id, title) { this.update(id, { title }); },
+  rename(id, title) {
+    this.update(id, { title });
+  },
   remove(id) {
-    const chats = this.list().filter((c) => c.id !== id);
-    this.save(chats);
+    _chats = this.list().filter((c) => c.id !== id);
     if (this.getActiveId() === id) this.setActive(null);
   },
   clearAll() {
-    localStorage.removeItem(KEY);
-    localStorage.removeItem(ACTIVE_KEY);
+    _chats = [];
+    try {
+      localStorage.removeItem(ACTIVE_KEY);
+      localStorage.removeItem("chat.chats");
+    } catch {}
   },
 };
 
@@ -109,6 +127,17 @@ export function initChat({ onSend, onNewMessage }) {
     scrollToBottom();
   }
 
+  function createBadge(provider, model) {
+    if (!provider && !model) return null;
+    const badge = document.createElement("div");
+    badge.className = "msg-provider-badge";
+    const icon = provider === "groq" ? "⚡" : provider === "gemini" ? "✨" : provider === "openrouter" ? "🌐" : "🤖";
+    const pName = (provider || "AI").toUpperCase();
+    const mName = (model || "").split("/").pop();
+    badge.innerHTML = `<span>${icon}</span> <span>${pName}</span> <span class="badge-dot">•</span> <span class="badge-model">${mName}</span>`;
+    return badge;
+  }
+
   function renderMessage(msg) {
     const wrap = document.createElement("div");
     wrap.className = `message ${msg.role}`;
@@ -117,6 +146,8 @@ export function initChat({ onSend, onNewMessage }) {
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
     if (msg.role === "assistant") {
+      const badge = createBadge(msg.provider, msg.model);
+      if (badge) wrap.appendChild(badge);
       bubble.innerHTML = renderMarkdown(msg.content || "");
     } else {
       bubble.textContent = msg.content;
@@ -182,9 +213,13 @@ export function initChat({ onSend, onNewMessage }) {
         bubble.innerHTML = renderMarkdown(text);
         scrollToBottom();
       },
-      finalize(text) {
+      finalize(text, provider, model) {
         bubble.innerHTML = renderMarkdown(text);
-        wrap.appendChild(renderActions(bubble, { role: "assistant", content: text }));
+        const badge = createBadge(provider, model);
+        if (badge) {
+          wrap.insertBefore(badge, bubble);
+        }
+        wrap.appendChild(renderActions(bubble, { role: "assistant", content: text, provider, model }));
         scrollToBottom();
       },
     };

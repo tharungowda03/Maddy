@@ -1,20 +1,18 @@
 import { API } from "./api.js";
 
-const KEY = "chat.user";
+let _currentUser = null;
 
 export const User = {
   get() {
-    try {
-      return JSON.parse(localStorage.getItem(KEY) || "null");
-    } catch {
-      return null;
-    }
+    return _currentUser;
   },
   set(user) {
-    localStorage.setItem(KEY, JSON.stringify(user));
+    _currentUser = user || null;
+    localStorage.removeItem("chat.user");
   },
   clear() {
-    localStorage.removeItem(KEY);
+    _currentUser = null;
+    localStorage.removeItem("chat.user");
   },
 };
 
@@ -24,12 +22,83 @@ export function initLogin({ onLogin }) {
   const emailInput = document.getElementById("loginEmail");
   const errorEl = document.getElementById("loginError");
   const submitBtn = form.querySelector('button[type="submit"]');
+  const googleWrap = document.getElementById("googleAuthWrap");
+  const googleBtn = document.getElementById("googleSignInBtn");
 
   const existing = User.get();
   if (existing) {
     nameInput.value = existing.name || "";
     emailInput.value = existing.email || "";
   }
+
+  async function setupGoogleAuth() {
+    try {
+      const config = await API.getAuthConfig();
+      if (!config?.google_client_id) {
+        if (googleWrap) googleWrap.hidden = true;
+        return;
+      }
+
+      const waitForGoogle = () =>
+        new Promise((resolve) => {
+          if (window.google?.accounts?.id) return resolve(window.google);
+          const interval = setInterval(() => {
+            if (window.google?.accounts?.id) {
+              clearInterval(interval);
+              resolve(window.google);
+            }
+          }, 100);
+          setTimeout(() => {
+            clearInterval(interval);
+            resolve(window.google || null);
+          }, 4000);
+        });
+
+      const google = await waitForGoogle();
+      if (!google?.accounts?.id) {
+        console.warn("Google Identity Services script did not load.");
+        return;
+      }
+
+      google.accounts.id.initialize({
+        client_id: config.google_client_id,
+        callback: async (response) => {
+          if (!response.credential) return;
+          errorEl.hidden = true;
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Connecting with Google...";
+          try {
+            const savedUser = await API.googleLogin(response.credential);
+            if (!savedUser?.id) throw new Error("The backend did not return a user ID.");
+            User.set(savedUser);
+            onLogin?.(savedUser);
+          } catch (err) {
+            errorEl.textContent = `Google Sign-In failed: ${err.message}`;
+            errorEl.hidden = false;
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Continue";
+          }
+        },
+      });
+
+      if (googleBtn) {
+        google.accounts.id.renderButton(googleBtn, {
+          type: "standard",
+          shape: "rectangular",
+          theme: "outline",
+          text: "continue_with",
+          size: "large",
+          logo_alignment: "left",
+          width: 320,
+        });
+      }
+    } catch (err) {
+      console.warn("Could not setup Google Sign-In:", err);
+    }
+  }
+
+  setupGoogleAuth();
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

@@ -5,7 +5,6 @@ from config import DATABASE_URL
 
 engine = create_engine(
     DATABASE_URL,
-    # SQLite needs this option; PostgreSQL and other production databases do not.
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
 )
 
